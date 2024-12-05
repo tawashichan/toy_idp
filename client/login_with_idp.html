@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OIDC Client</title>
+    <script>
+        // IdPのログインページにリダイレクトする関数
+        function loginWithIdP() {
+            const clientId = "sample-client";
+            const redirectUri = "http://localhost:8081/callback"; // クライアントのコールバックURL
+            const authorizationEndpoint = "http://localhost:8080/login";
+
+            // 認可リクエストURLを構築
+            const loginUrl = `${authorizationEndpoint}?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+            window.location.href = loginUrl;
+        }
+
+        // クエリパラメータから認可コードを取得する関数
+function getAuthorizationCode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('code');
+}
+
+// 認可コードを使用してIDトークンを取得する関数
+async function exchangeCodeForToken(authCode) {
+    const tokenEndpoint = "http://localhost:8080/token"; // IdPのトークンエンドポイント
+    const clientId = "sample-client";
+    const redirectUri = "http://localhost:8081/callback";
+
+    try {
+        // トークンリクエスト用データ
+        const requestData = new URLSearchParams({
+            client_id: clientId,
+            code: authCode,
+            redirect_uri: redirectUri,
+        });
+
+        // POSTリクエスト
+        const response = await fetch(tokenEndpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: requestData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch token: ${response.statusText}`);
+        }
+
+        // トークンレスポンスの解析
+        const data = await response.json();
+        return data.id_token;
+    } catch (error) {
+        console.error("Error exchanging code for token:", error);
+        return null;
+    }
+}
+
+// メイン処理
+(async function () {
+    if (window.location.pathname === "/callback") {
+        const authCode = getAuthorizationCode();
+
+        if (!authCode) {
+            console.error("Authorization code not found in query parameters");
+            return;
+        }
+
+        console.log("Authorization code:", authCode);
+
+        const idToken = await exchangeCodeForToken(authCode);
+
+        if (idToken) {
+            console.log("ID Token:", idToken);
+            // 必要に応じて次の処理を行う
+            document.body.innerHTML = `<h1>ID Token</h1><p>${idToken}</p>`;
+        } else {
+            console.error("Failed to retrieve ID Token");
+            document.body.innerHTML = `<h1>Error</h1><p>Failed to retrieve ID Token</p>`;
+        }
+    }
+})();
+
+    </script>
+</head>
+<body>
+    <h1>Welcome to OIDC Client</h1>
+    <p>Click the button below to login using the IdP:</p>
+    <button onclick="loginWithIdP()">Login with IdP</button>
+</body>
+</html>
