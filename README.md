@@ -6,3 +6,4 @@
 # todo
 
 - PKCE実装
+- 複数種類のwebappに対応(redirctまわりちゃんとやる)
